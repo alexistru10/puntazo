@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Puntazo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,800;1,800&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<style>
+/* VOICE: retransmisión deportiva, enérgica, un solo botón
+   IDEA: la pantalla de repetición de un estadio
+   PICTURE: la cámara en vivo con el marcador de Puntazo encima
+   COLOUR: azul noche, amarillo pelota, toque rojo de "en directo"
+   LAYOUT: barra de marcador, vídeo grande + botón, clips debajo */
+:root{--bg:#06141f;--panel:#0c2233;--line:#1b3b54;--ink:#f4f8fc;--soft:#8fb0c9;--ball:#dff23a;--red:#ff3b3b}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:
+  linear-gradient(115deg,transparent 0 62%,rgba(223,242,58,.07) 62% 70%,transparent 70%),
+  radial-gradient(1000px 500px at 20% -150px,#0f3a5c,transparent),var(--bg);
+  color:var(--ink);font:16px/1.5 Inter,system-ui,Segoe UI,sans-serif;min-height:100vh}
+main{max-width:1120px;margin:0 auto;padding:16px max(4vw,14px) 60px}
+.bar{display:flex;align-items:stretch;flex-wrap:wrap;gap:0;margin-bottom:16px;border-radius:12px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.35)}
+.bar>*{display:flex;align-items:center;gap:10px;padding:10px 16px}
+.brand{background:var(--ball);color:#0b1a00;font:italic 800 30px/1 'Barlow Condensed',sans-serif;letter-spacing:.5px;clip-path:polygon(0 0,100% 0,calc(100% - 14px) 100%,0 100%);padding-right:30px}
+.brand svg{width:28px;height:28px}
+.club{background:var(--panel);flex:1;font:800 22px/1.1 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.5px}
+.club small{font:600 14px Inter,sans-serif;color:var(--soft);text-transform:none;letter-spacing:0}
+.clock{background:#0a1a28;font:800 28px/1 'Barlow Condensed',sans-serif;font-variant-numeric:tabular-nums}
+.live{background:var(--red);font:800 18px/1 'Barlow Condensed',sans-serif;letter-spacing:1px}
+.live.off{background:#33475a}
+.dot{width:9px;height:9px;border-radius:50%;background:#fff}
+.live:not(.off) .dot{animation:b 1.2s infinite}
+@keyframes b{50%{opacity:.25}}
+.stage{display:grid;grid-template-columns:minmax(0,1fr) 270px;gap:16px;align-items:stretch}
+.cam{position:relative;background:#000;border-radius:14px;overflow:hidden;aspect-ratio:16/9;box-shadow:0 20px 50px rgba(0,0,0,.5),inset 0 0 0 1px var(--line)}
+.cam canvas{width:100%;height:100%;display:block}
+.start{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:20px;background:linear-gradient(160deg,#0f3a5c,#06141f)}
+.start h1{font:italic 800 clamp(34px,6vw,56px)/1 'Barlow Condensed',sans-serif;margin:0 0 6px;text-transform:uppercase}
+.start h1 span{color:var(--ball)}
+.start p{color:var(--soft);max-width:400px;margin:0 auto 18px}
+.btnStart{font:800 20px 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.5px;background:var(--ball);color:#0b1a00;border:0;border-radius:999px;padding:14px 30px;cursor:pointer}
+.side{background:var(--panel);border-radius:14px;padding:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;text-align:center;box-shadow:inset 0 0 0 1px var(--line)}
+#save{width:196px;height:196px;border-radius:50%;border:0;cursor:pointer;background:radial-gradient(circle at 35% 30%,#f6ff9a,var(--ball) 45%,#a3b40f);color:#0b1a00;font:italic 800 34px/1 'Barlow Condensed',sans-serif;text-transform:uppercase;box-shadow:0 10px 0 #7a870b,0 18px 34px rgba(0,0,0,.45);transition:transform .08s}
+#save:active{transform:translateY(6px);box-shadow:0 4px 0 #7a870b,0 8px 16px rgba(0,0,0,.4)}
+#save:disabled{filter:grayscale(1) brightness(.55);cursor:not-allowed}
+#save small{display:block;font:600 14px Inter,sans-serif;font-style:normal;text-transform:none;margin-top:6px}
+button:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid var(--ball);outline-offset:3px}
+.meter{width:100%}
+.meter .track{height:8px;background:#071827;border-radius:99px;overflow:hidden}
+.meter .fill{height:100%;width:0;background:var(--ball);transition:width .4s}
+.meter .lbl{font-size:13px;color:var(--soft);margin-top:6px}
+.hint{font-size:13px;color:var(--soft)}
+details{margin-top:14px;color:var(--soft);font-size:14px}
+summary{cursor:pointer;min-height:32px;display:inline-flex;align-items:center}
+.cfg{display:flex;flex-wrap:wrap;gap:12px;margin-top:8px}
+.cfg label{display:flex;flex-direction:column;gap:4px;flex:1 1 200px}
+.cfg input{font:16px Inter,sans-serif;padding:10px 12px;border-radius:8px;border:1px solid var(--line);background:#071827;color:var(--ink)}
+#toast{position:fixed;left:50%;top:18px;transform:translate(-50%,-90px);background:var(--ball);color:#0b1a00;font:italic 800 22px 'Barlow Condensed',sans-serif;text-transform:uppercase;padding:12px 26px;border-radius:999px;transition:transform .25s;z-index:9;box-shadow:0 10px 30px rgba(0,0,0,.4)}
+#toast.show{transform:translate(-50%,0)}
+h2{font:italic 800 30px/1 'Barlow Condensed',sans-serif;text-transform:uppercase;margin:36px 0 14px;display:flex;align-items:baseline;gap:12px}
+h2 span{font:400 14px Inter,sans-serif;font-style:normal;text-transform:none;color:var(--soft)}
+.clips{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:16px}
+.clip{background:var(--panel);border-radius:14px;overflow:hidden;box-shadow:inset 0 0 0 1px var(--line)}
+.clip video{width:100%;aspect-ratio:16/9;background:#000;display:block}
+.clip .body{padding:10px 12px 12px}
+.clip .meta{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:10px}
+.clip .num{font:italic 800 24px/1 'Barlow Condensed',sans-serif;color:var(--ball)}
+.clip .when{font-size:14px;color:var(--soft);text-align:right}
+.acts{display:flex;gap:8px}
+.acts a,.acts button{flex:1;display:grid;place-items:center;min-height:44px;border-radius:10px;font:600 15px Inter,sans-serif;text-decoration:none;cursor:pointer}
+.acts a{background:var(--ink);color:var(--bg)}
+.acts button{flex:0 0 auto;padding:0 14px;background:transparent;color:var(--soft);border:1px solid var(--line)}
+.empty{color:var(--soft);background:var(--panel);border-radius:14px;padding:22px;text-align:center;box-shadow:inset 0 0 0 1px var(--line)}
+@media(max-width:780px){.stage{grid-template-columns:1fr}.side{flex-direction:row;flex-wrap:wrap}#save{width:150px;height:150px;font-size:26px}.meter{flex:1 1 160px}.club{order:3;flex-basis:100%}}
+@media(prefers-reduced-motion:reduce){.live .dot{animation:none}#toast{transition:none}}
+</style>
+</head>
+<body>
+<main>
+  <div class="bar">
+    <div class="brand">
+      <svg viewBox="0 0 30 30" aria-hidden="true"><circle cx="15" cy="15" r="13" fill="#0b1a00"/><circle cx="15" cy="15" r="11" fill="#dff23a"/><path d="M6 9c5 4 5 8 0 12M24 9c-5 4-5 8 0 12" stroke="#0b1a00" stroke-width="1.8" fill="none"/></svg>
+      PUNTAZO
+    </div>
+    <div class="club"><span id="clubTxt">Mi club de pádel</span><small id="pistaTxt">Pista 1</small></div>
+    <div class="clock" id="clock">--:--:--</div>
+    <div class="live off" id="live"><span class="dot"></span><span id="liveTxt">APAGADA</span></div>
+  </div>
+
+  <div class="stage">
+    <div class="cam">
+      <canvas id="view" width="1280" height="720"></canvas>
+      <div class="start" id="startBox">
+        <div>
+          <h1>Cada <span>puntazo</span>, guardado</h1>
+          <p id="camErr">La cámara graba sin parar. Cuando pase algo bueno, pulsa el botón y te llevas los últimos 50 segundos.</p>
+          <button class="btnStart" id="start">Encender cámara</button>
+        </div>
+      </div>
+    </div>
+    <div class="side">
+      <button id="save" disabled>¡Puntazo!<small>Guarda los últimos 50 s</small></button>
+      <div class="meter"><div class="track"><div class="fill" id="fill"></div></div><div class="lbl" id="mlbl">Esperando cámara</div></div>
+      <div class="hint">También con la barra espaciadora</div>
+    </div>
+  </div>
+
+  <details>
+    <summary>Ajustes de la pista</summary>
+    <div class="cfg">
+      <label>Nombre del club<input id="cfgClub" maxlength="32"></label>
+      <label>Pista<input id="cfgPista" maxlength="20"></label>
+    </div>
+  </details>
+
+  <h2>Tus clips <span id="count"></span></h2>
+  <div class="clips" id="clips"></div>
+</main>
+<div id="toast"></div>
+
