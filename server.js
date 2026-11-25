@@ -10,6 +10,7 @@ const PORT = Number(process.env.PORT) || 8080;
 const ROOT = __dirname;
 const CLIPS = path.join(ROOT, 'clips');
 const MAX_BYTES = 300 * 1024 * 1024;
+const BORRAR_HORAS = Number(process.env.PUNTAZO_HORAS) || 24;   // los clips se borran solos pasadas estas horas
 fs.mkdirSync(CLIPS, { recursive: true });
 
 // La IP de esta computadora en la WiFi (evita adaptadores virtuales).
@@ -125,6 +126,22 @@ const server = http.createServer((req, res) => {
   send(res, 404, 'text/plain; charset=utf-8', 'No encontrado');
 });
 
+// Borrado automático de clips viejos (al arrancar y cada 30 minutos).
+function cleanOld() {
+  const limit = Date.now() - BORRAR_HORAS * 3600e3;
+  fs.readdir(CLIPS, (err, files) => {
+    if (err) return;
+    for (const f of files) {
+      const full = path.join(CLIPS, f);
+      fs.stat(full, (e, st) => {
+        if (!e && st.isFile() && st.mtimeMs < limit) fs.unlink(full, () => console.log(`Clip borrado por antiguo: ${f}`));
+      });
+    }
+  });
+}
+cleanOld();
+setInterval(cleanOld, 30 * 60e3);
+
 server.listen(PORT, '0.0.0.0', () => {
   console.log('');
   console.log('  PUNTAZO funcionando');
@@ -132,6 +149,7 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log(`  Los móviles usarán:   ${BASE}`);
   const others = lanIPs().slice(1).map(x => x.ip);
   if (others.length) console.log(`  (otras IP posibles: ${others.join(', ')})`);
+  console.log(`  Los clips se borran solos a las ${BORRAR_HORAS} horas.`);
   console.log('  No cierres esta ventana mientras uses Puntazo.');
   console.log('');
   if (process.platform === 'win32' && !process.env.PUNTAZO_NO_OPEN) require('child_process').exec(`start "" http://localhost:${PORT}`);

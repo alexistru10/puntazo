@@ -83,6 +83,8 @@ h2 span{font:400 14px Inter,sans-serif;font-style:normal;text-transform:none;col
 .qr .count{font-size:13px;color:#3b5870;margin-top:8px}
 .acts .qrb{flex:0 0 auto;padding:0 14px;background:var(--ball);color:#0b1a00;border:0}
 .mode{font-size:13px;color:var(--soft);margin-top:10px}
+.warn{background:#ff3b3b;color:#fff;border-radius:12px;padding:14px 18px;margin-bottom:16px;font-weight:600}
+.warn a{color:#fff}
 @media(max-width:780px){.stage{grid-template-columns:1fr}.side{flex-direction:row;flex-wrap:wrap}#save{width:150px;height:150px;font-size:26px}.meter{flex:1 1 160px}.club{order:3;flex-basis:100%}}
 @media(prefers-reduced-motion:reduce){.live .dot{animation:none}#toast{transition:none}}
 </style>
@@ -98,6 +100,8 @@ h2 span{font:400 14px Inter,sans-serif;font-style:normal;text-transform:none;col
     <div class="clock" id="clock">--:--:--</div>
     <div class="live off" id="live"><span class="dot"></span><span id="liveTxt">APAGADA</span></div>
   </div>
+
+  <div class="warn" id="modeWarn" hidden>Así no sale el QR para el móvil. Cierra esta pestaña y abre Puntazo con doble clic en <b>Iniciar Puntazo.bat</b> (o, si ya lo tienes abierto, entra en <a href="http://localhost:8080">localhost:8080</a>).</div>
 
   <div class="stage">
     <div class="cam">
@@ -123,6 +127,7 @@ h2 span{font:400 14px Inter,sans-serif;font-style:normal;text-transform:none;col
       <label>Nombre del club<input id="cfgClub" maxlength="32"></label>
       <label>Pista<input id="cfgPista" maxlength="20"></label>
     </div>
+    <p>Los clips se borran solos a las 24 horas, aquí y en la carpeta "clips".</p>
   </details>
   <div class="mode" id="mode"></div>
 

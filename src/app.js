@@ -4,6 +4,8 @@ const $ = id => document.getElementById(id);
 const CLIP = 50;          // segundos que se guardan al pulsar
 const KEEP = CLIP + 4;    // segundos que se guardan en memoria
 const KEY_EVERY = 1e6;    // un fotograma clave cada segundo (µs)
+const PAUSA = 5;          // segundos de pausa entre un clip y el siguiente
+const BORRAR_HORAS = 24;  // los clips se borran solos pasadas estas horas
 
 let vEnc = null, aEnc = null, vMeta = null, aMeta = null, vMux = '', aMux = '', aInfo = null, size = null;
 let vChunks = [], aChunks = [], clips = [];
@@ -158,7 +160,7 @@ function meter(){
   const have = vChunks.length ? (performance.now() - vChunks[0].w)/1000 : 0;
   const ready = Math.min(CLIP, have);
   $('fill').style.width = (ready/CLIP*100) + '%';
-  $('mlbl').textContent = ready >= CLIP - 0.5 ? 'Listo: se guardarán 50 s' : `Llenando memoria… ${Math.floor(ready)} de ${CLIP} s`;
+  if (!cooling) $('mlbl').textContent = ready >= CLIP - 0.5 ? 'Se guardarán los últimos 50 s' : `Se guardarán ${Math.floor(ready)} s (lo grabado hasta ahora)`;
 }
 
 // El navegador no siempre dice cuánto dura cada trozo: se calcula con el siguiente.
@@ -199,7 +201,8 @@ function save(){
     mux.finalize();
     const secs = (vs[vs.length-1].c.timestamp - vs[0].c.timestamp) / 1e6;
     addClip(new Blob([out.buffer], {type: 'video/mp4'}), secs);
-    toast(secs < CLIP - 1 ? `Guardado (solo había ${Math.round(secs)} s)` : '¡Puntazo guardado!');
+    toast('¡Puntazo guardado!');
+    cooldown();
   } catch (e) {
     console.error(e); toast('No se pudo guardar el clip');
   }
@@ -223,6 +226,19 @@ $('start').onclick = async () => {
   $('live').classList.remove('off'); $('liveTxt').textContent = 'EN VIVO';
   $('save').disabled = false;
 };
+
+// Pausa tras cada clip para no llenar la lista de repetidos.
+let cooling = false;
+function cooldown(){
+  cooling = true; $('save').disabled = true;
+  let left = PAUSA;
+  const small = $('save').querySelector('small'), orig = small.textContent;
+  const upd = () => {
+    if (left <= 0) { clearInterval(t); cooling = false; $('save').disabled = false; small.textContent = orig; meter(); return; }
+    small.textContent = `Listo de nuevo en ${left} s`; $('mlbl').textContent = 'Clip guardado'; left--;
+  };
+  const t = setInterval(upd, 1000); upd();
+}
 
 $('save').onclick = () => { save(); $('save').blur(); };
 const typing = e => e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA');
@@ -260,19 +276,22 @@ function addClip(blob, secs){
 const SERVER = location.protocol === 'http:' || location.protocol === 'https:';
 $('mode').textContent = SERVER
   ? 'Los clips se comparten por QR con los móviles conectados a la misma WiFi.'
-  : 'Para descargar clips en el móvil con un QR, abre Puntazo con "Iniciar Puntazo".';
+  : '';
+if (!SERVER) {
+  $('modeWarn').hidden = false;
+}
 
 async function upload(c){
   try {
     const r = await fetch('/api/clips', { method: 'POST', headers: {'Content-Type': 'video/mp4'}, body: c.blob });
-    if (!r.ok) throw new Error(r.status);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
     const j = await r.json();
     c.remote = j.url;
     if (db && clips.includes(c)) try { store('readwrite').put({id: c.id, date: c.date, secs: c.secs, blob: c.blob, remote: c.remote}); } catch(e){}
     render();
     showQR(j.url);
   } catch (e) {
-    console.error(e); toast('No se pudo preparar el QR');
+    console.error(e); toast('No se pudo preparar el QR. ¿Está abierta la ventana negra?');
   }
 }
 
@@ -329,7 +348,17 @@ render();
 openDB().then(d => {
   db = d; if (!db) return;
   const q = store('readonly').getAll();
-  q.onsuccess = () => { clips = q.result.sort((a,b) => b.id - a.id); render(); };
+  q.onsuccess = () => { clips = q.result.sort((a,b) => b.id - a.id); cleanOld(); render(); };
 });
+// Borrado automático: los clips con más de BORRAR_HORAS horas desaparecen solos.
+function cleanOld(){
+  const limit = Date.now() - BORRAR_HORAS*3600e3;
+  const old = clips.filter(c => c.id < limit);
+  if (!old.length) return;
+  for (const c of old) { if (c.url) URL.revokeObjectURL(c.url); if (db) try { store('readwrite').delete(c.id); } catch(e){} }
+  clips = clips.filter(c => c.id >= limit);
+  render();
+}
+setInterval(cleanOld, 10*60e3);
 }
 </script>

@@ -7,7 +7,8 @@ Prototipo: una cámara graba la pista de pádel sin parar y, al pulsar **¡Punta
 2. Pulsa **Encender cámara** y da permiso.
 3. Pulsa **¡Puntazo!** (o la barra espaciadora) cuando pase algo bueno.
 4. Sale un **QR**: el jugador lo escanea con su móvil (misma WiFi) y descarga el vídeo.
-5. Los clips quedan guardados en la carpeta `clips`.
+5. Después de cada clip hay una pausa de 5 s. Se puede guardar desde el primer segundo (guarda lo grabado hasta ese momento, máximo 50 s).
+6. Los clips quedan en la carpeta `clips` y se borran solos a las 24 horas.
 
 También puedes abrir `index.html` directamente, pero entonces no hay QR.
 
