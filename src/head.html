@@ -71,6 +71,18 @@ h2 span{font:400 14px Inter,sans-serif;font-style:normal;text-transform:none;col
 .acts a{background:var(--ink);color:var(--bg)}
 .acts button{flex:0 0 auto;padding:0 14px;background:transparent;color:var(--soft);border:1px solid var(--line)}
 .empty{color:var(--soft);background:var(--panel);border-radius:14px;padding:22px;text-align:center;box-shadow:inset 0 0 0 1px var(--line)}
+.qr{position:fixed;inset:0;background:rgba(3,10,16,.82);display:none;place-items:center;padding:16px;z-index:8}
+.qr.show{display:grid}
+.qr .card{background:var(--ink);color:#06141f;border-radius:18px;padding:22px;text-align:center;width:min(420px,100%);box-shadow:0 30px 80px rgba(0,0,0,.6)}
+.qr h3{font:italic 800 34px/1 'Barlow Condensed',sans-serif;text-transform:uppercase;margin:0 0 4px}
+.qr p{margin:0 0 12px;color:#3b5870}
+.qr .code{background:#fff;border-radius:12px;padding:8px;display:grid;place-items:center}
+.qr .code img{width:100%;max-width:320px;image-rendering:pixelated}
+.qr .url{font-size:13px;color:#3b5870;overflow-wrap:anywhere;margin:10px 0}
+.qr button{font:600 16px Inter,sans-serif;background:#06141f;color:var(--ink);border:0;border-radius:10px;min-height:44px;padding:0 22px;cursor:pointer}
+.qr .count{font-size:13px;color:#3b5870;margin-top:8px}
+.acts .qrb{flex:0 0 auto;padding:0 14px;background:var(--ball);color:#0b1a00;border:0}
+.mode{font-size:13px;color:var(--soft);margin-top:10px}
 @media(max-width:780px){.stage{grid-template-columns:1fr}.side{flex-direction:row;flex-wrap:wrap}#save{width:150px;height:150px;font-size:26px}.meter{flex:1 1 160px}.club{order:3;flex-basis:100%}}
 @media(prefers-reduced-motion:reduce){.live .dot{animation:none}#toast{transition:none}}
 </style>
@@ -112,9 +124,20 @@ h2 span{font:400 14px Inter,sans-serif;font-style:normal;text-transform:none;col
       <label>Pista<input id="cfgPista" maxlength="20"></label>
     </div>
   </details>
+  <div class="mode" id="mode"></div>
 
   <h2>Tus clips <span id="count"></span></h2>
   <div class="clips" id="clips"></div>
 </main>
 <div id="toast"></div>
+<div class="qr" id="qr" role="dialog" aria-modal="true" aria-labelledby="qrTitle">
+  <div class="card">
+    <h3 id="qrTitle">¡Llévate tu puntazo!</h3>
+    <p>Escanea con la cámara del móvil (misma WiFi)</p>
+    <div class="code" id="qrCode"></div>
+    <div class="url" id="qrUrl"></div>
+    <button id="qrClose">Cerrar</button>
+    <div class="count" id="qrCount"></div>
+  </div>
+</div>
 

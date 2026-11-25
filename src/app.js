@@ -229,6 +229,7 @@ const typing = e => e.target && (e.target.tagName === 'INPUT' || e.target.tagNam
 document.addEventListener('keydown', e => {
   if (e.code === 'Space' && !typing(e)) { e.preventDefault(); if (!e.repeat && !$('save').disabled) save(); }
 });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') hideQR(); });
 document.addEventListener('keyup', e => { if (e.code === 'Space' && !typing(e)) e.preventDefault(); });
 
 let tt;
@@ -252,7 +253,44 @@ function addClip(blob, secs){
   clips.unshift(c);
   if (db) try { store('readwrite').put(c); } catch(e){}
   render();
+  if (SERVER) upload(c);
 }
+
+// ---------- Compartir por QR (solo si se abrió con "Iniciar Puntazo") ----------
+const SERVER = location.protocol === 'http:' || location.protocol === 'https:';
+$('mode').textContent = SERVER
+  ? 'Los clips se comparten por QR con los móviles conectados a la misma WiFi.'
+  : 'Para descargar clips en el móvil con un QR, abre Puntazo con "Iniciar Puntazo".';
+
+async function upload(c){
+  try {
+    const r = await fetch('/api/clips', { method: 'POST', headers: {'Content-Type': 'video/mp4'}, body: c.blob });
+    if (!r.ok) throw new Error(r.status);
+    const j = await r.json();
+    c.remote = j.url;
+    if (db && clips.includes(c)) try { store('readwrite').put({id: c.id, date: c.date, secs: c.secs, blob: c.blob, remote: c.remote}); } catch(e){}
+    render();
+    showQR(j.url);
+  } catch (e) {
+    console.error(e); toast('No se pudo preparar el QR');
+  }
+}
+
+let qrTimer = null;
+function showQR(url){
+  const q = qrcode(0, 'M'); q.addData(url); q.make();
+  const img = new Image(); img.alt = 'Código QR para descargar el clip'; img.src = q.createDataURL(8, 2);
+  $('qrCode').replaceChildren(img);
+  $('qrUrl').textContent = url;
+  $('qr').classList.add('show');
+  let left = 30;
+  clearInterval(qrTimer);
+  const upd = () => { $('qrCount').textContent = `Se cierra solo en ${left} s`; if (left-- <= 0) hideQR(); };
+  upd(); qrTimer = setInterval(upd, 1000);
+}
+function hideQR(){ clearInterval(qrTimer); $('qr').classList.remove('show'); }
+$('qrClose').onclick = hideQR;
+$('qr').addEventListener('click', e => { if (e.target === $('qr')) hideQR(); });
 function delClip(id){
   const c = clips.find(x => x.id === id);
   if (c && c.url) URL.revokeObjectURL(c.url);
@@ -282,7 +320,9 @@ function render(){
     const a = document.createElement('div'); a.className = 'acts';
     const dl = document.createElement('a'); dl.href = c.url; dl.download = fileName(c); dl.textContent = 'Descargar';
     const del = document.createElement('button'); del.textContent = 'Borrar'; del.onclick = () => delClip(c.id);
-    a.append(dl, del); b.append(m, a); el.append(v, b); box.append(el);
+    a.append(dl);
+    if (c.remote) { const qb = document.createElement('button'); qb.className = 'qrb'; qb.textContent = 'QR'; qb.onclick = () => showQR(c.remote); a.append(qb); }
+    a.append(del); b.append(m, a); el.append(v, b); box.append(el);
   });
 }
 render();
