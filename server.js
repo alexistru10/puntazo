@@ -32,6 +32,23 @@ const BASE = `http://${IP}:${PORT}`;
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const validId = id => /^[0-9]{8}-[0-9]{6}-[0-9]{3}$/.test(id);
 const fileOf = id => path.join(CLIPS, `puntazo_${id}.mp4`);
+const infoOf = id => path.join(CLIPS, `puntazo_${id}.json`);
+// Nombre bonito para la descarga (lo manda la app; si no, uno por defecto).
+function nameOf(id) {
+  try { const n = JSON.parse(fs.readFileSync(infoOf(id), 'utf8')).name; if (n) return n; } catch (e) {}
+  return `puntazo_${id}.mp4`;
+}
+function cleanName(raw) {
+  let n = '';
+  try { n = decodeURIComponent(String(raw || '')); } catch (e) {}
+  n = n.replace(/[\\/:*?"<>|\u0000-\u001f]+/g, '').replace(/\s+/g, ' ').trim().slice(0, 120);
+  if (!n) return '';
+  return /\.mp4$/i.test(n) ? n : n + '.mp4';
+}
+function disposition(name) {
+  const ascii = name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\x20-\x7e]/g, '_').replace(/"/g, '');
+  return `attachment; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(name)}`;
+}
 
 function newId() {
   const d = new Date(), p = (n, l = 2) => String(n).padStart(l, '0');
@@ -62,7 +79,7 @@ a.dl{display:block;text-align:center;background:var(--ball);color:#0b1a00;font-w
 <h1>¡Aquí está tu puntazo!</h1>
 <p>${esc(`${d}/${mo}/${y} · ${h}:${mi}:${s}`)}</p>
 <video src="/v/${esc(id)}" controls playsinline preload="metadata"></video>
-<a class="dl" href="/v/${esc(id)}?dl=1" download="puntazo_${esc(id)}.mp4">Descargar vídeo</a>
+<a class="dl" href="/v/${esc(id)}?dl=1" download="${esc(nameOf(id))}">Descargar vídeo</a>
 <p class="tip">En iPhone: pulsa Descargar, abre la flecha azul de descargas, toca el vídeo y luego Compartir → Guardar vídeo.</p>
 </main></body></html>`;
 }
@@ -73,7 +90,7 @@ function sendVideo(req, res, id, download) {
   fs.stat(file, (err, st) => {
     if (err) return send(res, 404, 'text/plain; charset=utf-8', 'Clip no encontrado');
     const headers = { 'Content-Type': 'video/mp4', 'Accept-Ranges': 'bytes' };
-    if (download) headers['Content-Disposition'] = `attachment; filename="puntazo_${id}.mp4"`;
+    if (download) headers['Content-Disposition'] = disposition(nameOf(id));
     const m = /bytes=(\d*)-(\d*)/.exec(req.headers.range || '');
     if (m && (m[1] || m[2])) {
       let start = m[1] ? Number(m[1]) : st.size - Number(m[2]);
@@ -91,6 +108,7 @@ function sendVideo(req, res, id, download) {
 
 function saveClip(req, res) {
   const id = newId(), tmp = fileOf(id) + '.part';
+  const niceName = cleanName(req.headers['x-puntazo-name']);
   const out = fs.createWriteStream(tmp);
   let size = 0, failed = false;
   req.on('data', chunk => {
@@ -102,6 +120,7 @@ function saveClip(req, res) {
     if (failed) return;
     fs.rename(tmp, fileOf(id), err => {
       if (err) return send(res, 500, 'application/json', '{"error":"save"}');
+      if (niceName) fs.writeFileSync(infoOf(id), JSON.stringify({ name: niceName }));
       console.log(`Clip guardado: clips/puntazo_${id}.mp4 (${(size / 1e6).toFixed(1)} MB)`);
       send(res, 200, 'application/json', JSON.stringify({ id, url: `${BASE}/c/${id}` }));
     });

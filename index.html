@@ -4618,7 +4618,7 @@ function openDB(){
 const store = mode => db.transaction('clips', mode).objectStore('clips');
 
 function addClip(blob, secs){
-  const c = { id: Date.now(), date: new Date(), secs: Math.round(secs), blob };
+  const c = { id: Date.now(), date: new Date(), secs: Math.round(secs), blob, club: cfg.club, pista: cfg.pista };
   clips.unshift(c);
   if (db) try { store('readwrite').put(c); } catch(e){}
   render();
@@ -4636,11 +4636,11 @@ if (!SERVER) {
 
 async function upload(c){
   try {
-    const r = await fetch('/api/clips', { method: 'POST', headers: {'Content-Type': 'video/mp4'}, body: c.blob });
+    const r = await fetch('/api/clips', { method: 'POST', headers: {'Content-Type': 'video/mp4', 'X-Puntazo-Name': encodeURIComponent(fileName(c))}, body: c.blob });
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const j = await r.json();
     c.remote = j.url;
-    if (db && clips.includes(c)) try { store('readwrite').put({id: c.id, date: c.date, secs: c.secs, blob: c.blob, remote: c.remote}); } catch(e){}
+    if (db && clips.includes(c)) try { store('readwrite').put({id: c.id, date: c.date, secs: c.secs, blob: c.blob, club: c.club, pista: c.pista, remote: c.remote}); } catch(e){}
     render();
     showQR(j.url);
   } catch (e) {
@@ -4670,9 +4670,12 @@ function delClip(id){
   if (db) try { store('readwrite').delete(id); } catch(e){}
   render();
 }
+// Nombre del archivo al descargar, p. ej. "Puntazo - Mi club - Pista 1 - 25 nov 2026 07.02.04.mp4"
 function fileName(c){
   const d = new Date(c.date), ext = (c.blob.type || '').includes('mp4') ? 'mp4' : 'webm';
-  return `puntazo_${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}_${pad(d.getHours())}-${pad(d.getMinutes())}-${pad(d.getSeconds())}.${ext}`;
+  const club = c.club === undefined ? cfg.club : c.club, pista = c.pista === undefined ? cfg.pista : c.pista;
+  const parts = ['Puntazo', club, pista, `${d.getDate()} ${MESES[d.getMonth()].toLowerCase()} ${d.getFullYear()} ${pad(d.getHours())}.${pad(d.getMinutes())}.${pad(d.getSeconds())}`];
+  return parts.filter(Boolean).join(' - ').replace(/[\\/:*?"<>|]+/g, '').replace(/\s+/g, ' ').trim() + '.' + ext;
 }
 function render(){
   const box = $('clips');
